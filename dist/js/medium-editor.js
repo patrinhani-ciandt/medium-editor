@@ -4905,6 +4905,11 @@ MediumEditor.extensions = {};
          */
         diffTop: -10,
 
+        /* diffMarginTop: [Number]
+         * value in pixels to be added to the Y axis positioning of the toolbar to handle an extra margin.
+         */
+        diffMarginTop: 0,
+
         /* firstButtonClass: [string]
          * CSS class added to the first button in the toolbar.
          */
@@ -5469,37 +5474,84 @@ MediumEditor.extensions = {};
 
         positionToolbar: function (selection) {
             // position the toolbar at left 0, so we can get the real width of the toolbar
-            this.getToolbarElement().style.left = '0';
+            var toolbarElement = this.getToolbarElement();
 
-            var windowWidth = this.window.innerWidth,
+            toolbarElement.style.left = '0';
+            toolbarElement.style.zIndex = 0;
+
+            var elementsContainer = this.getEditorOption('elementsContainer') || this.document.body,
+                windowWidth = this.window.innerWidth,
                 range = selection.getRangeAt(0),
                 boundary = range.getBoundingClientRect(),
                 middleBoundary = (boundary.left + boundary.right) / 2,
-                toolbarElement = this.getToolbarElement(),
                 toolbarHeight = toolbarElement.offsetHeight,
                 toolbarWidth = toolbarElement.offsetWidth,
                 halfOffsetWidth = toolbarWidth / 2,
                 buttonHeight = 50,
-                defaultLeft = this.diffLeft - halfOffsetWidth;
+                defaultLeft = this.diffLeft - halfOffsetWidth,
+                scrollTopValue = elementsContainer.scrollTop,
+                pageYOffset = this.window.pageYOffset,
+                deltaY = (this.diffTop + pageYOffset + scrollTopValue - toolbarHeight),
+                diffTopAdjustment = 19,
+                diffLeftAdjustment = 16;
 
-            if (boundary.top < buttonHeight) {
+            if ((boundary.top - this.diffMarginTop) < buttonHeight) {
                 toolbarElement.classList.add('medium-toolbar-arrow-over');
                 toolbarElement.classList.remove('medium-toolbar-arrow-under');
-                toolbarElement.style.top = buttonHeight + boundary.bottom - this.diffTop + this.window.pageYOffset - toolbarHeight + 'px';
+                toolbarElement.style.top = deltaY + (buttonHeight + boundary.bottom + diffTopAdjustment) + 'px';
             } else {
                 toolbarElement.classList.add('medium-toolbar-arrow-under');
                 toolbarElement.classList.remove('medium-toolbar-arrow-over');
-                toolbarElement.style.top = boundary.top + this.diffTop + this.window.pageYOffset - toolbarHeight + 'px';
+                toolbarElement.style.top = deltaY + boundary.top + 'px';
             }
 
+            var styleLeft = 0;
             if (middleBoundary < halfOffsetWidth) {
-                toolbarElement.style.left = defaultLeft + halfOffsetWidth + 'px';
+                styleLeft = defaultLeft + halfOffsetWidth;
             } else if ((windowWidth - middleBoundary) < halfOffsetWidth) {
-                toolbarElement.style.left = windowWidth + defaultLeft - halfOffsetWidth + 'px';
+                styleLeft = windowWidth + defaultLeft - halfOffsetWidth;
             } else {
-                toolbarElement.style.left = defaultLeft + middleBoundary + 'px';
+                styleLeft = defaultLeft + middleBoundary;
             }
-        }
+
+            var arrowPositioning = toolbarWidth / 2,
+                styleLeftDiff = 0;
+            if ((styleLeft + toolbarWidth + diffLeftAdjustment) >= windowWidth) {
+                arrowPositioning = toolbarWidth - ((windowWidth - middleBoundary) - diffLeftAdjustment);
+                styleLeftDiff = ((styleLeft + toolbarWidth) - windowWidth);
+                styleLeft = (styleLeft - styleLeftDiff) - diffLeftAdjustment;
+            } else if (styleLeft <= 0) {
+                arrowPositioning = middleBoundary;
+            } else {
+                styleLeft = styleLeft - styleLeftDiff;
+            }
+
+            toolbarElement.style.left = styleLeft + 'px';
+
+            if (arrowPositioning > 0) {
+                this.setCssToolbarArrow('left: ' + arrowPositioning + 'px;');
+            }
+        },
+
+        setCssToolbarArrow: function (cssContent) {
+             var toolbarElement = this.getToolbarElement(),
+                 dynStyleTagId = 'dynstyle-' + toolbarElement.id,
+                 dynStyleTag = document.getElementById(dynStyleTagId);
+
+             if (!dynStyleTag) {
+                 dynStyleTag = document.createElement('style');
+                 dynStyleTag.id = dynStyleTagId;
+                 dynStyleTag.type = 'text/css';
+                 document.head.appendChild(dynStyleTag);
+             }
+
+             var cssText = '#' + toolbarElement.id + '.medium-toolbar-arrow-under:after ';
+             cssText += ',#' + toolbarElement.id + '.medium-toolbar-arrow-over:before { ';
+             cssText += cssContent;
+             cssText += ' }';
+
+             dynStyleTag.innerHTML = cssText;
+         }
     });
 
     MediumEditor.extensions.toolbar = Toolbar;
@@ -5575,7 +5627,7 @@ MediumEditor.extensions = {};
             textContent = node.textContent,
             caretPositions = MediumEditor.selection.getCaretOffsets(node);
 
-        if ((textContent[caretPositions.left - 1] === undefined) || (textContent[caretPositions.left - 1] === ' ') || (textContent[caretPositions.left] === undefined)) {
+        if ((textContent[caretPositions.left - 1] === undefined) || (textContent[caretPositions.left - 1].trim() === '')) {
             event.preventDefault();
         }
     }

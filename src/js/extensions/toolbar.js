@@ -601,67 +601,67 @@
         },
 
         positionToolbar: function (selection) {
-             // position the toolbar at left 0, so we can get the real width of the toolbar
+            // position the toolbar at left 0, so we can get the real width of the toolbar
             var toolbarElement = this.getToolbarElement();
- 
+
             toolbarElement.style.left = '0';
             toolbarElement.style.zIndex = 0;
 
             var elementsContainer = this.getEditorOption('elementsContainer') || this.document.body,
-                 windowWidth = this.window.innerWidth,
-                 range = selection.getRangeAt(0),
-                 boundary = range.getBoundingClientRect(),
-                 middleBoundary = (boundary.left + boundary.right) / 2,
-                 toolbarHeight = toolbarElement.offsetHeight,
-                 toolbarWidth = toolbarElement.offsetWidth,
-                 halfOffsetWidth = toolbarWidth / 2,
-                 buttonHeight = 50,
-                 defaultLeft = this.diffLeft - halfOffsetWidth,
-                 scrollTopValue = elementsContainer.scrollTop,
-                 pageYOffset = this.window.pageYOffset,
-                 deltaY = (this.diffTop + pageYOffset + scrollTopValue - toolbarHeight),
-                 diffTopAdjustment = 19,
-                 diffLeftAdjustment = 16;
+                windowWidth = this.window.innerWidth,
+                range = selection.getRangeAt(0),
+                boundary = range.getBoundingClientRect(),
+                middleBoundary = (boundary.left + boundary.right) / 2,
+                toolbarHeight = toolbarElement.offsetHeight,
+                toolbarWidth = toolbarElement.offsetWidth,
+                halfOffsetWidth = toolbarWidth / 2,
+                buttonHeight = 50,
+                defaultLeft = this.diffLeft - halfOffsetWidth,
+                scrollTopValue = elementsContainer.scrollTop,
+                pageYOffset = this.window.pageYOffset,
+                deltaY = (this.diffTop + pageYOffset + scrollTopValue - toolbarHeight),
+                diffTopAdjustment = 19,
+                diffLeftAdjustment = 16;
 
-             if ((boundary.top - this.diffMarginTop) < buttonHeight) {
-                 toolbarElement.classList.add('medium-toolbar-arrow-over');
-                 toolbarElement.classList.remove('medium-toolbar-arrow-under');
-                 toolbarElement.style.top = deltaY + (buttonHeight + boundary.bottom + diffTopAdjustment) + 'px';
-             } else {
-                 toolbarElement.classList.add('medium-toolbar-arrow-under');
-                 toolbarElement.classList.remove('medium-toolbar-arrow-over');
-                 toolbarElement.style.top = deltaY + boundary.top + 'px';
-             }
- 
-             var styleLeft = 0;
-             if (middleBoundary < halfOffsetWidth) {
-                 styleLeft = defaultLeft + halfOffsetWidth;
-             } else if ((windowWidth - middleBoundary) < halfOffsetWidth) {
-                 styleLeft = windowWidth + defaultLeft - halfOffsetWidth;
-             } else {
-                 styleLeft = defaultLeft + middleBoundary;
-             }
+            if ((boundary.top - this.diffMarginTop) < buttonHeight) {
+                toolbarElement.classList.add('medium-toolbar-arrow-over');
+                toolbarElement.classList.remove('medium-toolbar-arrow-under');
+                toolbarElement.style.top = deltaY + (buttonHeight + boundary.bottom + diffTopAdjustment) + 'px';
+            } else {
+                toolbarElement.classList.add('medium-toolbar-arrow-under');
+                toolbarElement.classList.remove('medium-toolbar-arrow-over');
+                toolbarElement.style.top = deltaY + boundary.top + 'px';
+            }
 
-             var arrowPositioning = toolbarWidth / 2,
-                 styleLeftDiff = 0;
-             if ((styleLeft + toolbarWidth + diffLeftAdjustment) >= windowWidth) {
-                 arrowPositioning = toolbarWidth - ((windowWidth - middleBoundary) - diffLeftAdjustment);
-                 styleLeftDiff = ((styleLeft + toolbarWidth) - windowWidth);
-                 styleLeft = (styleLeft - styleLeftDiff) - diffLeftAdjustment;
-             } else if (styleLeft <= 0) {
-                 arrowPositioning = middleBoundary;
-             } else {
-                 styleLeft = styleLeft - styleLeftDiff;
-             }
+            var styleLeft = 0;
+            if (middleBoundary < halfOffsetWidth) {
+                styleLeft = defaultLeft + halfOffsetWidth;
+            } else if ((windowWidth - middleBoundary) < halfOffsetWidth) {
+                styleLeft = windowWidth + defaultLeft - halfOffsetWidth;
+            } else {
+                styleLeft = defaultLeft + middleBoundary;
+            }
 
-             toolbarElement.style.left = styleLeft + 'px';
+            var arrowPositioning = toolbarWidth / 2,
+                styleLeftDiff = 0;
+            if ((styleLeft + toolbarWidth + diffLeftAdjustment) >= windowWidth) {
+                arrowPositioning = toolbarWidth - ((windowWidth - middleBoundary) - diffLeftAdjustment);
+                styleLeftDiff = ((styleLeft + toolbarWidth) - windowWidth);
+                styleLeft = (styleLeft - styleLeftDiff) - diffLeftAdjustment;
+            } else if (styleLeft <= 0) {
+                arrowPositioning = middleBoundary;
+            } else {
+                styleLeft = styleLeft - styleLeftDiff;
+            }
 
-             if (arrowPositioning > 0) {
-                 this.setCssToolbarArrow('left: ' + arrowPositioning + 'px;');
-             }
-         },
+            toolbarElement.style.left = styleLeft + 'px';
 
-         setCssToolbarArrow: function (cssContent) {
+            if (arrowPositioning > 0) {
+                this.setCssToolbarArrow('left: ' + arrowPositioning + 'px;');
+            }
+        },
+
+        setCssToolbarArrow: function (cssContent) {
              var toolbarElement = this.getToolbarElement(),
                  dynStyleTagId = 'dynstyle-' + toolbarElement.id,
                  dynStyleTag = document.getElementById(dynStyleTagId);
