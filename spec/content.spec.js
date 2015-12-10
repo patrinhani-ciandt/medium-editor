@@ -120,6 +120,44 @@ describe('Content TestCase', function () {
 
             expect(evt.preventDefault).toHaveBeenCalled();
         });
+
+        it('should allow one space at the end of a line when disableExtraSpaces options is true', function () {
+            this.el.innerHTML = '<p>lorem ipsum</p>';
+
+            var editor = this.newMediumEditor('.editor', { disableExtraSpaces: true }),
+                evt;
+
+            placeCursorInsideElement(editor.elements[0].getElementsByTagName('p')[0], 1);
+
+            evt = prepareEvent(editor.elements[0], 'keydown', {
+                keyCode: MediumEditor.util.keyCode.SPACE
+            });
+
+            spyOn(evt, 'preventDefault').and.callThrough();
+
+            firePreparedEvent(evt, editor.elements[0], 'keydown');
+
+            expect(evt.preventDefault).not.toHaveBeenCalled();
+        });
+
+        it('should prevent more spaces from being inserted at the end of a line when disableExtraSpaces options is true', function () {
+            this.el.innerHTML = '<p>lorem ipsum    <br /></p>';
+
+            var editor = this.newMediumEditor('.editor', { disableExtraSpaces: true }),
+                evt;
+
+            placeCursorInsideElement(editor.elements[0].getElementsByTagName('p')[0], 1);
+
+            evt = prepareEvent(editor.elements[0], 'keydown', {
+                keyCode: MediumEditor.util.keyCode.SPACE
+            });
+
+            spyOn(evt, 'preventDefault').and.callThrough();
+
+            firePreparedEvent(evt, editor.elements[0], 'keydown');
+
+            expect(evt.preventDefault).toHaveBeenCalled();
+        });
     });
 
     describe('when the enter key is pressed', function () {
@@ -473,6 +511,32 @@ describe('Content TestCase', function () {
         expect(document.execCommand).toHaveBeenCalledWith('formatBlock', false, 'p');
         // Webkit inserts a <p> tag, firefox & ie do not
         expect(this.el.innerHTML).toMatch(/(<p><br><\/p>)?/);
+    });
+
+    describe('when pressing backspace key on blockquote element', function () {
+        it('should remove the blockquote tag and replace it with p tag when cursor is at the start of the blockquote content', function () {
+            this.el.innerHTML = '<blockquote>lorem ipsum</blockquote>';
+            var editor = this.newMediumEditor('.editor'),
+                target = editor.elements[0].querySelector('blockquote');
+
+            placeCursorInsideElement(target, 0);
+            fireEvent(target, 'keydown', {
+                keyCode: MediumEditor.util.keyCode.BACKSPACE
+            });
+            expect(this.el.innerHTML).toBe('<p>lorem ipsum</p>');
+        });
+
+        it('should not change any formatting when cursor is not at the start of the blockquote content', function () {
+            this.el.innerHTML = '<blockquote>lorem ipsum</blockquote>';
+            var editor = this.newMediumEditor('.editor'),
+                target = editor.elements[0].querySelector('blockquote');
+
+            placeCursorInsideElement(target, 1);
+            fireEvent(target, 'keydown', {
+                keyCode: MediumEditor.util.keyCode.BACKSPACE
+            });
+            expect(this.el.innerHTML).toBe('<blockquote>lorem ipsum</blockquote>');
+        });
     });
 
     describe('when deleting an empty first list item via backspace', function () {

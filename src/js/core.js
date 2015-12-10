@@ -8,7 +8,7 @@
             textContent = node.textContent,
             caretPositions = MediumEditor.selection.getCaretOffsets(node);
 
-        if ((textContent[caretPositions.left - 1] === undefined) || (textContent[caretPositions.left - 1] === ' ') || (textContent[caretPositions.left] === undefined)) {
+        if ((textContent[caretPositions.left - 1] === undefined) || (textContent[caretPositions.left - 1].trim() === '')) {
             event.preventDefault();
         }
     }
@@ -130,6 +130,14 @@
             node.parentElement.removeChild(node);
 
             event.preventDefault();
+        } else if (MediumEditor.util.isKey(event, MediumEditor.util.keyCode.BACKSPACE) &&
+                (MediumEditor.util.getClosestTag(node, 'blockquote') !== false) &&
+                MediumEditor.selection.getCaretOffsets(node).left === 0) {
+
+            // when cursor is at the begining of the element and the element is <blockquote>
+            // then pressing backspace key should change the <blockquote> to a <p> tag
+            event.preventDefault();
+            MediumEditor.util.execFormatBlock(this.options.ownerDocument, 'p');
         }
     }
 
@@ -330,6 +338,8 @@
     }
 
     function initElements() {
+        var isTextareaUsed = false;
+
         this.elements.forEach(function (element, index) {
             if (!this.options.disableEditing && !element.getAttribute('data-disable-editing')) {
                 element.setAttribute('contentEditable', true);
@@ -341,15 +351,18 @@
             element.setAttribute('medium-editor-index', index);
 
             if (element.hasAttribute('medium-editor-textarea-id')) {
-                this.on(element, 'input', function (event) {
-                    var target = event.target,
-                        textarea = target.parentNode.querySelector('textarea[medium-editor-textarea-id="' + target.getAttribute('medium-editor-textarea-id') + '"]');
-                    if (textarea) {
-                        textarea.value = this.serialize()[target.id].value;
-                    }
-                }.bind(this));
+                isTextareaUsed = true;
             }
         }, this);
+
+        if (isTextareaUsed) {
+            this.subscribe('editableInput', function (event, editable) {
+                var textarea = editable.parentNode.querySelector('textarea[medium-editor-textarea-id="' + editable.getAttribute('medium-editor-textarea-id') + '"]');
+                if (textarea) {
+                    textarea.value = this.serialize()[editable.id].value;
+                }
+            }.bind(this));
+        }
     }
 
     function attachHandlers() {
