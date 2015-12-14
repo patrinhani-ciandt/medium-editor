@@ -619,7 +619,7 @@
                 defaultLeft = this.diffLeft - halfOffsetWidth,
                 scrollTopValue = elementsContainer.scrollTop,
                 pageYOffset = this.window.pageYOffset,
-                deltaY = (this.diffTop + pageYOffset + scrollTopValue - toolbarHeight),
+                deltaY = (this.diffTop + pageYOffset + scrollTopValue - toolbarHeight) - elementsContainer.offsetTop,
                 diffTopAdjustment = 19,
                 diffLeftAdjustment = 16;
 
