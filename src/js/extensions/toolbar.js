@@ -415,7 +415,7 @@
             }
 
             // If we don't have a 'valid' selection -> hide toolbar
-            if (this.window.getSelection().toString().trim() === '' ||
+            if (!MediumEditor.selection.selectionContainsContent(this.document) ||
                 (this.allowMultiParagraphSelection === false && this.multipleBlockElementsSelected())) {
                 return this.hideToolbar();
             }
@@ -622,6 +622,16 @@
                 deltaY = (this.diffTop + pageYOffset + scrollTopValue - toolbarHeight) - elementsContainer.offsetTop,
                 diffTopAdjustment = 19,
                 diffLeftAdjustment = 16;
+
+            // Handle selections with just images
+            if (!boundary || ((boundary.height === 0 && boundary.width === 0) && range.startContainer === range.endContainer)) {
+                // If there's a nested image, use that for the bounding rectangle
+                if (range.startContainer.nodeType === 1 && range.startContainer.querySelector('img')) {
+                    boundary = range.startContainer.querySelector('img').getBoundingClientRect();
+                } else {
+                    boundary = range.startContainer.getBoundingClientRect();
+                }
+            }
 
             if ((boundary.top - this.diffMarginTop) < buttonHeight) {
                 toolbarElement.classList.add('medium-toolbar-arrow-over');
