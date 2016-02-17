@@ -1,3 +1,36 @@
+5.14.2 / 2016-02-10
+==================
+* Support Microsoft Edge
+  * Fallback to custom insertHTML command instead of built-in command for Edge
+  * Use shim code for detecting input on contenteditable for Edge
+  * Fix issue with converting blockquotes to paragraphs in Edge
+  * Update documentation, fix tests, and include Edge in browser testing
+
+
+5.14.1 / 2016-02-05
+==================
+* Fix issue with saving selection after newline and whitespace text nodes
+* Fix import/export selection to prefer start of nodes over end of nodes
+* Fix for getClosestBlockContainer utility function
+* Fix for getTopBlockContainer utility function
+* Deprecate getFirstTextNode utility function
+
+
+5.14.0 / 2016-01-31
+==================
+* Added pre clean replacements
+* Fixed an infinite loop
+* Handled enter event for empty h2/h3 tag
+
+
+5.13.0 / 2016-01-18
+==================
+* Added stickyTopOffset option to keep on the screen a sticky toolbar
+* Fixed misplacement of buttons when selection is near to the right edge
+* Updated dev dependencies
+* Added reference to README for who is using medium-editor
+
+
 5.12.0 / 2015-12-15
 ==================
 * Fix issue with image-only selections

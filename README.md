@@ -10,7 +10,7 @@ MediumEditor has been written using vanilla JavaScript, no additional frameworks
 
 [![Sauce Test Status](https://saucelabs.com/browser-matrix/mediumeditor.svg)](https://saucelabs.com/u/mediumeditor)
 
-![Supportd Browsers](https://cloud.githubusercontent.com/assets/2444240/7519189/a819e426-f4ad-11e4-8740-626396c5d61b.png)
+![Supportd Browsers](https://cloud.githubusercontent.com/assets/2444240/12874138/d3960a04-cd9b-11e5-8cc5-8136d82cf5f6.png)
 
 [![NPM info](https://nodei.co/npm/medium-editor.png?downloads=true)](https://www.npmjs.com/package/medium-editor)
 
@@ -173,9 +173,9 @@ var editor = new MediumEditor('.editable', {
 
 #### Button Options
 
-Button behavior can be modified by passing an object into the buttons array instead of a string. This allow for overriding some of the default behavior of buttons. The following options are some of the basic parts of buttons that you may override, but any part of the `MediumEditor.Extension.prototype` can be overriden via these button options. (Check out the [source code for buttons](src/js/extensions/button.js) to see what all can be overriden).
+Button behavior can be modified by passing an object into the buttons array instead of a string. This allow for overriding some of the default behavior of buttons. The following options are some of the basic parts of buttons that you may override, but any part of the `MediumEditor.Extension.prototype` can be overridden via these button options. (Check out the [source code for buttons](src/js/extensions/button.js) to see what all can be overridden).
 
-* __name__: name of the button being overriden
+* __name__: name of the button being overridden
 * __action__: argument to pass to `MediumEditor.execAction()` when the button is clicked.
 * __aria__: value to add as the aria-label attribute of the button element displayed in the toolbar. This is also used as the tooltip for the button.
 * __tagNames__: array of element tag names that would indicate that this button has already been applied. If this action has already been applied, the button will be displayed as 'active' in the toolbar.
@@ -338,7 +338,8 @@ var editor = new MediumEditor('.editable', {
 
 * __forcePlainText__: Forces pasting as plain text. Default: `true`
 * __cleanPastedHTML__: cleans pasted content from different sources, like google docs etc. Default: `false`
-* __cleanReplacements__: custom pairs (2 element arrays) of RegExp and replacement text to use during paste when __forcePlainText__ or __cleanPastedHTML__ are `true` OR when calling `cleanPaste(text)` helper method. Default: `[]`
+* __preCleanReplacements__: custom pairs (2 element arrays) of RegExp and replacement text to use during paste when __forcePlainText__ or __cleanPastedHTML__ are `true` OR when calling `cleanPaste(text)` helper method.  These replacements are executed _before_ builtin replacements.  Default: `[]`
+* __cleanReplacements__: custom pairs (2 element arrays) of RegExp and replacement text to use during paste when __forcePlainText__ or __cleanPastedHTML__ are `true` OR when calling `cleanPaste(text)` helper method.  These replacements are executed _after_ builtin replacements.  Default: `[]`
 * __cleanAttrs__: list of element attributes to remove during paste when __cleanPastedHTML__ is `true` or when calling `cleanPaste(text)` or `pasteHTML(html,options)` helper methods. Default: `['class', 'style', 'dir']`
 * __cleanTags__: list of element tag names to remove during paste when __cleanPastedHTML__ is `true` or when calling `cleanPaste(text)` or `pasteHTML(html,options)` helper methods. Default: `['meta']`
 
@@ -408,7 +409,7 @@ var editor = new MediumEditor('.editable', {
 
 ### Image Dragging Options
 
-The image dragging handler is a built-in extenson for handling dragging & dropping images into the contenteditable.  This feature is ON by default.
+The image dragging handler is a built-in extension for handling dragging & dropping images into the contenteditable.  This feature is ON by default.
 
 To disable built-in image dragging, set the value of the `imageDragging` option to `false`:
 ```javascript
@@ -416,6 +417,18 @@ var editor = new MediumEditor('.editable', {
     imageDragging: false
 });
 ```
+
+#### Disable File Dragging
+To stop preventing drag & drop events and disable file dragging in general, provide a dummy ImageDragging extension.
+```javascript
+var editor = new MediumEditor('.editor', {
+    extensions: {
+        'imageDragging': {}
+    }
+});
+```
+Due to the [state of code](https://github.com/yabwe/medium-editor/issues/966) in 5.0.0, the editor *ALWAYS* prevented any drag and drop actions. 
+We will have a better way to disable file dragging in 6.*
 
 ### Options Example:
 
@@ -551,7 +564,7 @@ editor.subscribe('editableInput', function (event, editable) {
 });
 ```
 
-This event is supported in all browsers supported by MediumEditor (including IE9+)!  To help with cases when one instance of MediumEditor is monitoring multiple elements, the 2nd argument passed to the event handler (`editable` in the example above) will be a reference to the contenteditable element that has actually changed.
+This event is supported in all browsers supported by MediumEditor (including IE9+ and Edge)!  To help with cases when one instance of MediumEditor is monitoring multiple elements, the 2nd argument passed to the event handler (`editable` in the example above) will be a reference to the contenteditable element that has actually changed.
 
 This is handy when you need to capture any modifications to the contenteditable element including:
 * Typing
@@ -561,9 +574,9 @@ This is handy when you need to capture any modifications to the contenteditable 
 
 Why is this interesting and why should you use this event instead of just attaching to the `input` event on the contenteditable element?
 
-So for most modern browsers (Chrome, Firefox, Safari, etc.), the `input` event works just fine. Infact, `editableInput` is just a proxy for the `input` event in those browsers. However, the `input` event [is not supported for contenteditable elements in IE 9-11](https://connect.microsoft.com/IE/feedback/details/794285/ie10-11-input-event-does-not-fire-on-div-with-contenteditable-set).
+So for most modern browsers (Chrome, Firefox, Safari, etc.), the `input` event works just fine. Infact, `editableInput` is just a proxy for the `input` event in those browsers. However, the `input` event [is not supported for contenteditable elements in IE 9-11](https://connect.microsoft.com/IE/feedback/details/794285/ie10-11-input-event-does-not-fire-on-div-with-contenteditable-set) and is _mostly_ supported in Microsoft Edge, but not fully.
 
-So, to properly support the `editableInput` event in Internet Explorer, MediumEditor uses a combination of the `selectionchange` and `keypress` events, as well as monitoring calls to `document.execCommand`.
+So, to properly support the `editableInput` event in Internet Explorer and Microsoft Edge, MediumEditor uses a combination of the `selectionchange` and `keypress` events, as well as monitoring calls to `document.execCommand`.
 
 ## Extensions & Plugins
 
@@ -629,6 +642,10 @@ Looking for something simple for a first contribution? Try fixing an [easy first
 ## Contributors (100+ and counting!)
 
 [https://github.com/yabwe/medium-editor/graphs/contributors](https://github.com/yabwe/medium-editor/graphs/contributors)
+
+## Is Your Org Using MediumEditor?
+
+Add your org [here](https://github.com/yabwe/medium-editor/issues/828) and we can add you to our [landing page](https://yabwe.github.io/medium-editor/#who-is-using-it)!
 
 ## License
 

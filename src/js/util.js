@@ -40,6 +40,8 @@
         // by rg89
         isIE: ((navigator.appName === 'Microsoft Internet Explorer') || ((navigator.appName === 'Netscape') && (new RegExp('Trident/.*rv:([0-9]{1,}[.0-9]{0,})').exec(navigator.userAgent) !== null))),
 
+        isEdge: (/Edge\/\d+/).exec(navigator.userAgent) !== null,
+
         // if firefox
         isFF: (navigator.userAgent.toLowerCase().indexOf('firefox') > -1),
 
@@ -316,6 +318,22 @@
             return nextNode;
         },
 
+        // Find an element's previous sibling within a medium-editor element
+        // If one doesn't exist, find the closest ancestor's previous sibling
+        findPreviousSibling: function (node) {
+            if (!node || Util.isMediumEditorElement(node)) {
+                return false;
+            }
+
+            var previousSibling = node.previousSibling;
+            while (!previousSibling && !Util.isMediumEditorElement(node.parentNode)) {
+                node = node.parentNode;
+                previousSibling = node.previousSibling;
+            }
+
+            return previousSibling;
+        },
+
         isDescendant: function isDescendant(parent, child, checkEquality) {
             if (!parent || !child) {
                 return false;
@@ -421,7 +439,14 @@
         insertHTMLCommand: function (doc, html) {
             var selection, range, el, fragment, node, lastNode, toReplace;
 
-            if (doc.queryCommandSupported('insertHTML')) {
+            /* Edge's implementation of insertHTML is just buggy right now:
+             * - Doesn't allow leading white space at the beginning of an element
+             * - Found a case when a <font size="2"> tag was inserted when calling alignCenter inside a blockquote
+             *
+             * There are likely many other bugs, these are just the ones we found so far.
+             * For now, let's just use the same fallback we did for IE
+             */
+            if (!MediumEditor.util.isEdge && doc.queryCommandSupported('insertHTML')) {
                 try {
                     return doc.execCommand('insertHTML', false, html);
                 } catch (ignore) {}
@@ -510,7 +535,7 @@
                 tagName = '<' + tagName + '>';
             }
 
-            // When FF or IE, we have to handle blockquote node seperately as 'formatblock' does not work.
+            // When FF, IE and Edge, we have to handle blockquote node seperately as 'formatblock' does not work.
             // https://developer.mozilla.org/en-US/docs/Web/API/Document/execCommand#Commands
             if (blockContainer && blockContainer.nodeName.toLowerCase() === 'blockquote') {
                 // For IE, just use outdent
@@ -518,8 +543,8 @@
                     return doc.execCommand('outdent', false, tagName);
                 }
 
-                // For Firefox, make sure there's a nested block element before calling outdent
-                if (Util.isFF && tagName === 'p') {
+                // For Firefox and Edge, make sure there's a nested block element before calling outdent
+                if ((Util.isFF || Util.isEdge) && tagName === 'p') {
                     childNodes = Array.prototype.slice.call(blockContainer.childNodes);
                     // If there are some non-block elements we need to wrap everything in a <p> before we outdent
                     if (childNodes.some(function (childNode) {
@@ -554,6 +579,25 @@
                 for (i = 0; i < el.length; i += 1) {
                     if (false === url || url === el[i].attributes.href.value) {
                         el[i].target = '_blank';
+                    }
+                }
+            }
+        },
+
+        /*
+         * this function is called to explicitly remove the target='_blank' as FF holds on to _blank value even
+         * after unchecking the checkbox on anchor form
+         */
+        removeTargetBlank: function (el, anchorUrl) {
+            var i;
+            if (el.nodeName.toLowerCase() === 'a') {
+                el.removeAttribute('target');
+            } else {
+                el = el.getElementsByTagName('a');
+
+                for (i = 0; i < el.length; i += 1) {
+                    if (anchorUrl === el[i].attributes.href.value) {
+                        el[i].removeAttribute('target');
                     }
                 }
             }
@@ -864,17 +908,29 @@
             return element && element.nodeType !== 3 && Util.blockContainerElementNames.indexOf(element.nodeName.toLowerCase()) !== -1;
         },
 
+        /* Finds the closest ancestor which is a block container element
+         * If element is within editor element but not within any other block element,
+         * the editor element is returned
+         */
         getClosestBlockContainer: function (node) {
             return Util.traverseUp(node, function (node) {
-                return Util.isBlockContainer(node);
+                return Util.isBlockContainer(node) || Util.isMediumEditorElement(node);
             });
         },
 
+        /* Finds highest level ancestor element which is a block container element
+         * If element is within editor element but not within any other block element,
+         * the editor element is returned
+         */
         getTopBlockContainer: function (element) {
-            var topBlock = element;
+            var topBlock = Util.isBlockContainer(element) ? element : false;
             Util.traverseUp(element, function (el) {
                 if (Util.isBlockContainer(el)) {
                     topBlock = el;
+                }
+                if (!topBlock && Util.isMediumEditorElement(el)) {
+                    topBlock = el;
+                    return true;
                 }
                 return false;
             });
@@ -900,13 +956,19 @@
             return element;
         },
 
+        // TODO: remove getFirstTextNode AND _getFirstTextNode when jumping in 6.0.0 (no code references)
         getFirstTextNode: function (element) {
+            Util.warn('getFirstTextNode is deprecated and will be removed in version 6.0.0');
+            return Util._getFirstTextNode(element);
+        },
+
+        _getFirstTextNode: function (element) {
             if (element.nodeType === 3) {
                 return element;
             }
 
             for (var i = 0; i < element.childNodes.length; i++) {
-                var textNode = Util.getFirstTextNode(element.childNodes[i]);
+                var textNode = Util._getFirstTextNode(element.childNodes[i]);
                 if (textNode !== null) {
                     return textNode;
                 }

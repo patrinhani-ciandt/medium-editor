@@ -99,6 +99,29 @@ describe('MediumEditor.util', function () {
         });
     });
 
+    describe('removetargetblank', function () {
+        it('removes target blank from a A element', function () {
+            var el = this.createElement('a', '', 'lorem ipsum');
+            el.attributes.href = 'http://0.0.0.0/bar.html';
+            el.attributes.target = '_blank';
+
+            MediumEditor.util.removeTargetBlank(el, 'http://0.0.0.0/bar.html');
+
+            expect(el.target).toBe('');
+        });
+
+        it('removes target blank on a A element from a DIV element', function () {
+            var el = this.createElement('div', '', '<a href="http://1.1.1.1/foo.html" target="_blank">foo</a> <a href="http://0.0.0.0/bar.html" target="_blank">bar</a>');
+
+            MediumEditor.util.removeTargetBlank(el, 'http://0.0.0.0/bar.html');
+
+            var nodes = el.getElementsByTagName('a');
+
+            expect(nodes[0].target).toBe('_blank');
+            expect(nodes[1].target).toBe('');
+        });
+    });
+
     describe('addClassToAnchors', function () {
         it('add class to anchors on a A element from a A element', function () {
             var el = this.createElement('a', '', 'lorem ipsum');
@@ -506,6 +529,66 @@ describe('MediumEditor.util', function () {
         });
     });
 
+    describe('getClosestBlockContainer', function () {
+        it('should return the closest block container', function () {
+            var el = this.createElement('div', '', '<blockquote><p>paragraph</p><ul><li><span>list item</span></li></ul></blockquote>'),
+                span = el.querySelector('span'),
+                container = MediumEditor.util.getClosestBlockContainer(span);
+            expect(container).toBe(el.querySelector('li'));
+        });
+
+        it('should return the parent editable if element is a text node child of the editor', function () {
+            var el = this.createElement('div', 'editable', ' <p>text</p>'),
+                emptyTextNode = el.firstChild;
+            this.newMediumEditor('.editable');
+            var container = MediumEditor.util.getClosestBlockContainer(emptyTextNode);
+            expect(container).toBe(el);
+        });
+    });
+
+    describe('getTopBlockContainer', function () {
+        it('should return the highest level block container', function () {
+            var el = this.createElement('div', '', '<blockquote><p>paragraph</p><ul><li><span>list item</span></li></ul></blockquote>'),
+                span = el.querySelector('span'),
+                container = MediumEditor.util.getTopBlockContainer(span);
+            expect(container).toBe(el.querySelector('blockquote'));
+        });
+
+        it('should return the parent editable if element is a text node child of the editor', function () {
+            var el = this.createElement('div', 'editable', ' <p>text</p>'),
+                emptyTextNode = el.firstChild;
+            this.newMediumEditor('.editable');
+            var container = MediumEditor.util.getTopBlockContainer(emptyTextNode);
+            expect(container).toBe(el);
+        });
+    });
+
+    describe('findPreviousSibling', function () {
+        it('should return the previous sibling of an element if it exists', function () {
+            var el = this.createElement('div', '', '<p>first <b>second </b><i>third</i></p><ul><li>fourth</li></ul>'),
+                second = el.querySelector('b'),
+                third = el.querySelector('i'),
+                prevSibling = MediumEditor.util.findPreviousSibling(third);
+            expect(prevSibling).toBe(second);
+        });
+
+        it('should return the previous sibling on an ancestor if a previous sibling does not exist', function () {
+            var el = this.createElement('div', '', '<p>first <b>second </b><i>third</i></p><ul><li>fourth</li></ul>'),
+                fourth = el.querySelector('li').firstChild,
+                p = el.querySelector('p'),
+                prevSibling = MediumEditor.util.findPreviousSibling(fourth);
+            expect(prevSibling).toBe(p);
+        });
+
+        it('should not find a previous sibling if the element is at the beginning of an editor element', function () {
+            var el = this.createElement('div', 'editable', '<p>first <b>second </b><i>third</i></p><ul><li>fourth</li></ul>'),
+                first = el.querySelector('p').firstChild;
+            this.newMediumEditor('.editable');
+            var prevSibling = MediumEditor.util.findPreviousSibling(first);
+            expect(prevSibling).toBeFalsy();
+        });
+    });
+
     describe('findOrCreateMatchingTextNodes', function () {
         it('should return text nodes within an element', function () {
             var el = this.createElement('div');
@@ -542,7 +625,7 @@ describe('MediumEditor.util', function () {
 
         it('should return an image when it falls within the specified range', function () {
             var el = this.createElement('div');
-            el.innerHTML = '<p>Plain <b>bold</b> <a href="#">li<img src="../demo.img/medium-editor.jpg" />nk</a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
+            el.innerHTML = '<p>Plain <b>bold</b> <a href="#">li<img src="../demo/img/medium-editor.jpg" />nk</a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
             var textNodes = MediumEditor.util.findOrCreateMatchingTextNodes(document, el, { start: 11, end: 15 });
             expect(textNodes.length).toBe(3);
             expect(textNodes[0].nodeValue).toBe('li');
@@ -552,7 +635,7 @@ describe('MediumEditor.util', function () {
 
         it('should return an image when it is at the end of the specified range', function () {
             var el = this.createElement('div');
-            el.innerHTML = '<p>Plain <b>bold</b> <a href="#">link<img src="../demo.img/medium-editor.jpg" /></a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
+            el.innerHTML = '<p>Plain <b>bold</b> <a href="#">link<img src="../demo/img/medium-editor.jpg" /></a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
             var textNodes = MediumEditor.util.findOrCreateMatchingTextNodes(document, el, { start: 11, end: 15 });
             expect(textNodes.length).toBe(2);
             expect(textNodes[0].nodeValue).toBe('link');
@@ -561,7 +644,7 @@ describe('MediumEditor.util', function () {
 
         it('should return an image when it is the only content in the specified range', function () {
             var el = this.createElement('div');
-            el.innerHTML = '<p>Plain <b>bold</b> <a href="#"><img src="../demo.img/medium-editor.jpg" /></a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
+            el.innerHTML = '<p>Plain <b>bold</b> <a href="#"><img src="../demo/img/medium-editor.jpg" /></a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
             var textNodes = MediumEditor.util.findOrCreateMatchingTextNodes(document, el, { start: 11, end: 11 });
             expect(textNodes.length).toBe(1);
             expect(textNodes[0].nodeName.toLowerCase()).toBe('img');
@@ -569,12 +652,38 @@ describe('MediumEditor.util', function () {
 
         it('should return images when they are at the beginning of the specified range', function () {
             var el = this.createElement('div');
-            el.innerHTML = '<p>Plain <b>bold</b> <a href="#"><img src="../demo.img/medium-editor.jpg" /><img src="../demo.img/roman.jpg" />link</a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
+            el.innerHTML = '<p>Plain <b>bold</b> <a href="#"><img src="../demo/img/medium-editor.jpg" /><img src="../demo/img/roman.jpg" />link</a> <i>italic</i> <u>underline</u> <span>span1 <span>span2</span></span></p>';
             var textNodes = MediumEditor.util.findOrCreateMatchingTextNodes(document, el, { start: 11, end: 15 });
             expect(textNodes.length).toBe(3);
             expect(textNodes[0].nodeName.toLowerCase()).toBe('img');
             expect(textNodes[1].nodeName.toLowerCase()).toBe('img');
             expect(textNodes[2].nodeValue).toBe('link');
+        });
+    });
+
+    // TODO: Remove these tests when getFirstTextNode is deprecated in 6.0.0
+    describe('getFirstTextNode', function () {
+        it('should find the first text node within an element', function () {
+            var el = this.createElement('div', '', '<p><b><i><u><a href="#">First</a> text</u> in</i> editor</b>!</p>'),
+                anchorText = el.querySelector('a').firstChild,
+                firstText = MediumEditor.util.getFirstTextNode(el);
+
+            expect(firstText).toBe(anchorText);
+        });
+
+        it('should return the text node if passed a text node', function () {
+            var el = this.createElement('div', '', '<p>text</p>'),
+                textNode = el.querySelector('p').firstChild,
+                firstText = MediumEditor.util.getFirstTextNode(textNode);
+
+            expect(firstText).toBe(textNode);
+        });
+
+        it('should return null if no text node exists in element', function () {
+            var el = this.createElement('div'),
+                firstText = MediumEditor.util.getFirstTextNode(el);
+
+            expect(firstText).toBeNull();
         });
     });
 });

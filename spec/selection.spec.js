@@ -1,4 +1,4 @@
-/*global selectElementContents, placeCursorInsideElement */
+/*global selectElementContents, placeCursorInsideElement, isSafari */
 
 describe('MediumEditor.selection TestCase', function () {
     'use strict';
@@ -138,16 +138,38 @@ describe('MediumEditor.selection TestCase', function () {
             expect(exportedSelection).toEqual(MediumEditor.selection.exportSelection(this.el, document));
         });
 
+        it('should be able to import an exported selection that contain nodeTypes > 3', function (done) {
+            this.el.innerHTML = '<div><p>stuff here <!-- comment nodeType is 8 --> additional stuff here </p></div>';
+            selectElementContents(this.el.querySelector('p'));
+            var exportedSelection = MediumEditor.selection.exportSelection(this.el, document);
+            expect(Object.keys(exportedSelection).sort()).toEqual(['end', 'start']);
+
+            selectElementContents(this.el);
+            expect(exportedSelection).toEqual(MediumEditor.selection.exportSelection(this.el, document));
+
+            MediumEditor.selection.importSelection(exportedSelection, this.el, document);
+            expect(exportedSelection).toEqual(MediumEditor.selection.exportSelection(this.el, document));
+            done();
+        });
+
         it('should import an exported selection outside any anchor tag', function () {
             this.el.innerHTML = '<p id=1>Hello world: <a href="#">http://www.example.com</a></p><p id=2><br></p>';
             var link = this.el.getElementsByTagName('a')[0];
 
             placeCursorInsideElement(link.childNodes[0], link.childNodes[0].nodeValue.length);
+            expect(MediumEditor.util.isDescendant(link, window.getSelection().getRangeAt(0).startContainer, true)).toBe(true);
 
             var exportedSelection = MediumEditor.selection.exportSelection(this.el, document);
             MediumEditor.selection.importSelection(exportedSelection, this.el, document, true);
             var range = window.getSelection().getRangeAt(0),
                 node = range.startContainer;
+
+            // For some reason, Safari mucks with the selection range and makes this case not hold
+            // since we only really care about whether this works in IE, and it works as expected
+            // in other browsers, just skip this assertion for Safari
+            if (!isSafari()) {
+                expect(MediumEditor.util.isDescendant(link, node, true)).toBe(false);
+            }
             // Even though we set the range to use the P tag as the start container, Safari normalizes the range
             // down to the text node. Setting the range to use the P tag for the start is necessary to support
             // MSIE, where it removes the link when the cursor is placed at the end of the text node in the anchor.
@@ -312,7 +334,7 @@ describe('MediumEditor.selection TestCase', function () {
             selectElementContents(lastLi.firstChild);
 
             var selectionData = MediumEditor.selection.exportSelection(this.el, document);
-            expect(selectionData.emptyBlocksIndex).toBe(0);
+            expect(selectionData.emptyBlocksIndex).toBeUndefined();
 
             MediumEditor.selection.importSelection(selectionData, this.el, document);
             var range = window.getSelection().getRangeAt(0);
@@ -324,7 +346,7 @@ describe('MediumEditor.selection TestCase', function () {
 
         it('should support a selection that specifies an image is the selection', function () {
             this.el.innerHTML = '<p>lorem ipsum <a href="#"><img src="../demo/img/medium-editor.jpg" /></a> dolor</p>';
-            MediumEditor.selection.importSelection({ start: 12, end: 12, trailingImageCount: 1 }, this.el, document);
+            MediumEditor.selection.importSelection({ start: 12, end: 12, startsWithImage: true, trailingImageCount: 1 }, this.el, document);
             var range = window.getSelection().getRangeAt(0);
             expect(range.toString()).toBe('');
             expect(MediumEditor.util.isDescendant(range.endContainer, this.el.querySelector('img'), true)).toBe(true, 'the image is not within the selection');
@@ -332,7 +354,7 @@ describe('MediumEditor.selection TestCase', function () {
 
         it('should support a selection that starts with an image', function () {
             this.el.innerHTML = '<p>lorem ipsum <a href="#"><img src="../demo/img/medium-editor.jpg" />img</a> dolor</p>';
-            MediumEditor.selection.importSelection({ start: 12, end: 15 }, this.el, document);
+            MediumEditor.selection.importSelection({ start: 12, end: 15, startsWithImage: true }, this.el, document);
             var range = window.getSelection().getRangeAt(0);
             expect(range.toString()).toBe('img');
             if (range.startContainer.nodeName.toLowerCase() === 'a') {
@@ -345,11 +367,44 @@ describe('MediumEditor.selection TestCase', function () {
         });
 
         it('should support a selection that ends with an image', function () {
-            this.el.innerHTML = '<p>lorem ipsum <a href="#">img<img src="../demo/img/medium-editor.jpg" /><img src="../img/roman.jpg" /></a> dolor</p>';
+            this.el.innerHTML = '<p>lorem ipsum <a href="#">img<img src="../demo/img/medium-editor.jpg" /><img src="../demo/img/roman.jpg" /></a> dolor</p>';
             MediumEditor.selection.importSelection({ start: 12, end: 15, trailingImageCount: 2 }, this.el, document);
             var range = window.getSelection().getRangeAt(0);
             expect(range.toString()).toBe('img');
             expect(MediumEditor.util.isDescendant(range.endContainer, this.el.querySelector('img'), true)).toBe(true, 'the image is not within the selection');
+        });
+
+        // https://github.com/yabwe/medium-editor/issues/935
+        it('should support a selection that is after white-space at the beginning of a paragraph', function () {
+            this.el.innerHTML = '   <p>one two<br><a href="transindex.hu">three</a><br></p><p><a href="amazon.com">one</a> two three</p>';
+            this.newMediumEditor(this.el);
+            var firstText = this.el.querySelector('p').firstChild;
+            MediumEditor.selection.select(document, firstText, 0, firstText, 'one'.length);
+            var exported = MediumEditor.selection.exportSelection(this.el, document);
+            MediumEditor.selection.importSelection(exported, this.el, document);
+            var range = window.getSelection().getRangeAt(0);
+            expect(range.toString()).toBe('one');
+        });
+
+        it('should support importing a collapsed selection at the end of all content', function () {
+            this.el.innerHTML = '<p>lorem ipsum <b>dolor</b></p>';
+            var boldText = this.el.querySelector('b').firstChild;
+
+            placeCursorInsideElement(boldText, boldText.length);
+            var range = window.getSelection().getRangeAt(0);
+            expect(range.collapsed).toBe(true);
+            expect(MediumEditor.util.isDescendant(boldText.parentNode, range.startContainer, true)).toBe(true);
+            expect(MediumEditor.util.isDescendant(boldText.parentNode, range.endContainer, true)).toBe(true);
+
+            var exported = MediumEditor.selection.exportSelection(this.el, document);
+            expect(exported.start).toBe('lorem ipsum dolor'.length);
+            expect(exported.end).toBe('lorem ipsum dolor'.length);
+
+            MediumEditor.selection.importSelection(exported, this.el, document);
+            range = window.getSelection().getRangeAt(0);
+            expect(range.collapsed).toBe(true);
+            expect(MediumEditor.util.isDescendant(boldText.parentNode, range.startContainer, true)).toBe(true);
+            expect(MediumEditor.util.isDescendant(boldText.parentNode, range.endContainer, true)).toBe(true);
         });
     });
 
