@@ -2,7 +2,7 @@
          prepareEvent, selectElementContents,
          selectElementContentsAndFire,
          placeCursorInsideElement,
-         isIE, isFirefox */
+         isFirefox */
 
 describe('Content TestCase', function () {
     'use strict';
@@ -16,7 +16,7 @@ describe('Content TestCase', function () {
         this.cleanupTest();
     });
 
-    it('should removing paragraphs when a list is inserted inside of it', function () {
+    it('should remove paragraphs when a list is inserted inside of it', function () {
         this.el.innerHTML = '<p>lorem ipsum<ul><li>dolor</li></ul></p>';
         var editor = this.newMediumEditor('.editor', {
                 toolbar: {
@@ -30,15 +30,23 @@ describe('Content TestCase', function () {
         fireEvent(toolbar.getToolbarElement().querySelector('[data-action="insertorderedlist"]'), 'click');
         expect(this.el.innerHTML).toMatch(/^<ol><li>lorem ipsum(<br>)?<\/li><\/ol><ul><li>dolor<\/li><\/ul>?/);
 
-        // for Chrome & Safari we manually moved the caret so let's check it
-        if (!isFirefox() && !isIE()) {
-            // ensure the cursor is positioned right after the text
-            sel = document.getSelection();
-            expect(sel.rangeCount).toBe(1);
+        sel = document.getSelection();
+        expect(sel.rangeCount).toBe(1);
+        range = sel.getRangeAt(0);
 
-            range = sel.getRangeAt(0);
-            expect(range.endOffset).toBe('lorem ipsum'.length);
+        // Chrome and Safari collapse the range at the end of the 'lorem ipsum' li
+        // Firefox, IE, and Edge select the 'lorem ipsum' contents
+        if (range.collapsed) {
+            expect(range.startContainer.nodeValue).toBe('lorem ipsum');
+            expect(range.endContainer.nodeValue).toBe('lorem ipsum');
             expect(range.startOffset).toBe('lorem ipsum'.length);
+            expect(range.endOffset).toBe('lorem ipsum'.length);
+        } else {
+            expect(range.toString()).toBe('lorem ipsum');
+            expect(range.startContainer.nodeName.toLowerCase()).toBe('li');
+            expect(range.endContainer.nodeName.toLowerCase()).toBe('li');
+            expect(range.startOffset).toBe(0);
+            expect(range.endOffset).toBe(1);
         }
     });
 
@@ -434,6 +442,45 @@ describe('Content TestCase', function () {
 
             expect(evt.preventDefault).toHaveBeenCalled();
         });
+
+        it('should add a new line when selected node is an h2/h3 tag with text in it and when disableDoubleReturn is true', function () {
+            this.el.innerHTML = '<p>lorem</p><h2>ipsum<br></h2>';
+            var editor = this.newMediumEditor('.editor', { disableDoubleReturn: true }),
+                p = editor.elements[0].getElementsByTagName('h2')[0],
+                evt;
+
+            placeCursorInsideElement(p, 0);
+
+            evt = prepareEvent(p, 'keydown', {
+                keyCode: MediumEditor.util.keyCode.ENTER
+            });
+
+            spyOn(evt, 'preventDefault').and.callThrough();
+
+            firePreparedEvent(evt, p, 'keydown');
+
+            expect(evt.preventDefault).not.toHaveBeenCalled();
+        });
+
+        it('should prevent new line being added when selected node is an empty h2/h3 tag and when disableDoubleReturn is true', function () {
+            this.el.innerHTML = '<p>lorem</p><h2><br></h2>';
+            var editor = this.newMediumEditor('.editor', { disableDoubleReturn: true }),
+                p = editor.elements[0].getElementsByTagName('h2')[0],
+                evt;
+
+            placeCursorInsideElement(p, 1);
+
+            evt = prepareEvent(p, 'keydown', {
+                keyCode: MediumEditor.util.keyCode.ENTER
+            });
+
+            spyOn(evt, 'preventDefault').and.callThrough();
+
+            firePreparedEvent(evt, p, 'keydown');
+
+            expect(evt.preventDefault).toHaveBeenCalled();
+            expect(this.el.innerHTML).toBe('<p>lorem</p><h2><br></h2>');
+        });
     });
 
     describe('should unlink anchors', function () {
@@ -597,7 +644,8 @@ describe('Content TestCase', function () {
             selectElementContentsAndFire(blockquote);
             editor.execAction('justifyCenter');
             blockquote = this.el.querySelector('blockquote');
-            expect(blockquote.querySelectorAll('br').length).toBe(3, 'Some of the <br> elements have been removed from the <blockquote>');
+            // Edge adds another <br /> automatically for some reason...
+            expect(blockquote.querySelectorAll('br').length).toBeGreaterThan(2, 'Some of the <br> elements have been removed from the <blockquote>');
             expect(blockquote.querySelectorAll('div').length).toBe(0, 'Some <br> elements were replaced with <div> elements within the <blckquote>');
         });
 

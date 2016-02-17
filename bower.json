@@ -32,7 +32,10 @@
     "demo",
     "package.json",
     "src",
-    "README.md",
-    "CHANGES.md"
+    "CHANGES.md",
+    "RELEASE-PROCESS.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "UPGRADE-5.md"
   ]
 }
