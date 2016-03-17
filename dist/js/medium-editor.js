@@ -3878,13 +3878,20 @@ MediumEditor.extensions = {};
 
         positionPreview: function (activeAnchor) {
             activeAnchor = activeAnchor || this.activeAnchor;
-            var buttonHeight = this.anchorPreview.offsetHeight,
+            var elementsContainer = this.getEditorOption('elementsContainer') || this.document.body,
+                boundaryElementsContainer = elementsContainer.getBoundingClientRect(),
+                elementsContainerTopValue = boundaryElementsContainer.top,
+                elementsContainerLeftValue = boundaryElementsContainer.left,
+                scrollTopValue = elementsContainer.scrollTop,
+                pageYOffset = this.window.pageYOffset,
+                buttonHeight = this.anchorPreview.offsetHeight,
                 boundary = activeAnchor.getBoundingClientRect(),
-                middleBoundary = (boundary.left + boundary.right) / 2,
+                middleBoundary = ((boundary.left - elementsContainerLeftValue) + (boundary.right - elementsContainerLeftValue)) / 2,
                 diffLeft = this.diffLeft,
                 diffTop = this.diffTop,
                 halfOffsetWidth,
-                defaultLeft;
+                defaultLeft,
+                deltaY = (pageYOffset + scrollTopValue - buttonHeight) - elementsContainerTopValue;
 
             halfOffsetWidth = this.anchorPreview.offsetWidth / 2;
             var toolbarExtension = this.base.getExtensionByName('toolbar');
@@ -3894,7 +3901,8 @@ MediumEditor.extensions = {};
             }
             defaultLeft = diffLeft - halfOffsetWidth;
 
-            this.anchorPreview.style.top = Math.round(buttonHeight + boundary.bottom - diffTop + this.window.pageYOffset - this.anchorPreview.offsetHeight) + 'px';
+            this.anchorPreview.style.top = deltaY + (buttonHeight + boundary.bottom - diffTop) + 'px';
+
             this.anchorPreview.style.right = 'initial';
             if (middleBoundary < halfOffsetWidth) {
                 this.anchorPreview.style.left = defaultLeft + halfOffsetWidth + 'px';
